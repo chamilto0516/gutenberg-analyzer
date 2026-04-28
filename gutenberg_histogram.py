@@ -5,14 +5,25 @@ import re
 import json
 from collections import Counter
 import sys
+from typing import List, Dict, Optional, Union, Tuple, Any
 
-def get_gutenberg_id(title):
+# Constants
+GUTENDEX_API_URL = "https://gutendex.com/books/"
+GUTENBERG_CACHE_URL_TEMPLATE = "https://www.gutenberg.org/cache/epub/{}/pg{}.txt"
+GUTENBERG_FALLBACK_URL_TEMPLATE = "https://www.gutenberg.org/files/{}/{}-0.txt"
+USER_AGENT = 'Mozilla/5.0'
+TERMINAL_WIDTH_SCALE = 50
+MIN_WORD_LENGTH = 5
+TOP_RESULTS_LIMIT = 10
+TOP_WORDS_LIMIT = 20
+
+def get_gutenberg_id(title: str) -> List[Dict[str, Union[int, str]]]:
     """Searches for a book by title using Gutendex API and returns a list of matching books."""
     print(f"Searching for: {title}...")
     encoded_title = urllib.parse.quote(title)
-    url = f"https://gutendex.com/books/?search={encoded_title}"
+    url = f"{GUTENDEX_API_URL}?search={encoded_title}"
     
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {'User-Agent': USER_AGENT}
     req = urllib.request.Request(url, headers=headers)
     
     try:
@@ -25,13 +36,13 @@ def get_gutenberg_id(title):
         print(f"Error during search: {e}")
         return []
 
-def download_book_text(book_id):
+def download_book_text(book_id: int) -> Optional[str]:
     """Downloads the raw UTF-8 text for a given Gutenberg ID."""
     print(f"Downloading book ID {book_id}...")
     # Using the cache URL which is generally more reliable for direct text access
-    url = f"https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.txt"
+    url = GUTENBERG_CACHE_URL_TEMPLATE.format(book_id, book_id)
     
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {'User-Agent': USER_AGENT}
     req = urllib.request.Request(url, headers=headers)
     
     try:
@@ -40,7 +51,7 @@ def download_book_text(book_id):
     except Exception as e:
         print(f"Error downloading text: {e}")
         # Try fallback if cache URL fails (sometimes ID-0.txt is used)
-        fallback_url = f"https://www.gutenberg.org/files/{book_id}/{book_id}-0.txt"
+        fallback_url = GUTENBERG_FALLBACK_URL_TEMPLATE.format(book_id, book_id)
         print(f"Retrying with fallback: {fallback_url}")
         req = urllib.request.Request(fallback_url, headers=headers)
         try:
@@ -49,13 +60,14 @@ def download_book_text(book_id):
         except:
             return None
 
-def analyze_text(text):
+def analyze_text(text: str) -> Counter:
     """Analyzes the text and returns a Counter of words of 5+ letters."""
     # Find all alphabetic words with length >= 5
-    words = re.findall(r'\b[a-zA-Z]{5,}\b', text.lower())
+    # Use triple curly braces to escape for f-string and provide the regex quantifier
+    words = re.findall(rf'\b[a-zA-Z]{{{MIN_WORD_LENGTH},}}\b', text.lower())
     return Counter(words)
 
-def print_histogram(word_counts):
+def print_histogram(word_counts: List[Tuple[str, int]]) -> None:
     """Prints a histogram of the word counts."""
     if not word_counts:
         print("No words found to display.")
@@ -66,7 +78,7 @@ def print_histogram(word_counts):
     max_count_len = len(str(max_count))
     
     # Scale histogram to fit roughly 50 characters for the longest bar
-    terminal_width_scale = 50
+    terminal_width_scale = TERMINAL_WIDTH_SCALE
     
     print("\nMost Common Words (5+ letters):\n")
     print(f"{'WORD'.ljust(max_label_len)} | {'COUNT'.ljust(max_count_len)} | HISTOGRAM")
@@ -99,7 +111,7 @@ def main():
         selected_book = matches[0]
     else:
         print(f"\nMultiple results found for '{book_name}'. Please choose one:")
-        top_10 = matches[:10]
+        top_10 = matches[:TOP_RESULTS_LIMIT]
         for i, book in enumerate(top_10, 1):
             print(f"{i}. {book['title']} (ID: {book['id']})")
         
@@ -130,7 +142,7 @@ def main():
     print("Analyzing text...")
     word_counter = analyze_text(text)
     unique_count = len(word_counter)
-    top_words = word_counter.most_common(20)
+    top_words = word_counter.most_common(TOP_WORDS_LIMIT)
     
     print(f"\nTotal unique words (5+ letters): {unique_count}")
     print_histogram(top_words)
