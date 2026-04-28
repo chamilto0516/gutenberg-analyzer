@@ -7,7 +7,7 @@ from collections import Counter
 import sys
 
 def get_gutenberg_id(title):
-    """Searches for a book by title using Gutendex API and returns the first Gutenberg ID found."""
+    """Searches for a book by title using Gutendex API and returns a list of matching books."""
     print(f"Searching for: {title}...")
     encoded_title = urllib.parse.quote(title)
     url = f"https://gutendex.com/books/?search={encoded_title}"
@@ -18,14 +18,12 @@ def get_gutenberg_id(title):
     try:
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode('utf-8'))
-            if data['results']:
-                # Return the ID of the first result
-                return data['results'][0]['id']
-            else:
-                return None
+            results = data.get('results', [])
+            # Return list of dicts with id and title
+            return [{'id': r['id'], 'title': r['title']} for r in results if 'id' in r and 'title' in r]
     except Exception as e:
         print(f"Error during search: {e}")
-        return None
+        return []
 
 def download_book_text(book_id):
     """Downloads the raw UTF-8 text for a given Gutenberg ID."""
@@ -89,14 +87,44 @@ def main():
         print("Invalid book name.")
         return
 
-    book_id = get_gutenberg_id(book_name)
-    if not book_id:
-        print(f"Could not find a book with the title '{book_name}' on Project Gutenberg.")
+    matches = get_gutenberg_id(book_name)
+    if not matches:
+        print(f"Could not find any books matching '{book_name}' on Project Gutenberg.")
         return
+
+    # If the first result is a very close match, just use it
+    # Otherwise, show the top 10 and let them pick
+    selected_book = None
+    if len(matches) == 1 or matches[0]['title'].lower() == book_name.lower():
+        selected_book = matches[0]
+    else:
+        print(f"\nMultiple results found for '{book_name}'. Please choose one:")
+        top_10 = matches[:10]
+        for i, book in enumerate(top_10, 1):
+            print(f"{i}. {book['title']} (ID: {book['id']})")
+        
+        try:
+            choice = input(f"\nSelect a number (1-{len(top_10)}) or press Enter for #1: ")
+            if not choice.strip():
+                selected_book = top_10[0]
+            else:
+                idx = int(choice) - 1
+                if 0 <= idx < len(top_10):
+                    selected_book = top_10[idx]
+                else:
+                    print("Invalid selection. Using the first result.")
+                    selected_book = top_10[0]
+        except ValueError:
+            print("Invalid input. Using the first result.")
+            selected_book = top_10[0]
+
+    book_id = selected_book['id']
+    book_title = selected_book['title']
+    print(f"\nSelected: {book_title}")
 
     text = download_book_text(book_id)
     if not text:
-        print(f"Failed to download the text for '{book_name}' (ID: {book_id}).")
+        print(f"Failed to download the text for '{book_title}' (ID: {book_id}).")
         return
 
     print("Analyzing text...")
