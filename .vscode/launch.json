@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Gutenberg Analyzer (Interactive)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/gutenberg_histogram.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": []
+        },
+        {
+            "name": "Python: Gutenberg Analyzer (Prompt for Title)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/gutenberg_histogram.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "${command:input:bookTitle}"
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "bookTitle",
+            "type": "promptString",
+            "description": "Enter the book title (e.g., Frankenstein)",
+            "default": "Pride and Prejudice"
+        }
+    ]
+}
