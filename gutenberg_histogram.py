@@ -52,10 +52,10 @@ def download_book_text(book_id):
             return None
 
 def analyze_text(text):
-    """Finds the 20 most common words of 5+ letters."""
+    """Analyzes the text and returns a Counter of words of 5+ letters."""
     # Find all alphabetic words with length >= 5
     words = re.findall(r'\b[a-zA-Z]{5,}\b', text.lower())
-    return Counter(words).most_common(20)
+    return Counter(words)
 
 def print_histogram(word_counts):
     """Prints a histogram of the word counts."""
@@ -100,7 +100,11 @@ def main():
         return
 
     print("Analyzing text...")
-    top_words = analyze_text(text)
+    word_counter = analyze_text(text)
+    unique_count = len(word_counter)
+    top_words = word_counter.most_common(20)
+    
+    print(f"\nTotal unique words (5+ letters): {unique_count}")
     print_histogram(top_words)
 
 if __name__ == "__main__":
