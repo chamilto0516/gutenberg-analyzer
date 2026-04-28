@@ -27,3 +27,4 @@ A Python CLI tool that searches for Project Gutenberg books via the Gutendex API
 - [ ] Add support for filtering out specific stop words.
 - [ ] Add option to export data to CSV.
 - [ ] Implement local caching of downloaded texts to avoid repeated network hits.
+- [ ] Implement a log file that persists across multiple runs to track search history and analysis stats.
